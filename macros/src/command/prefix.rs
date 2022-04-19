@@ -48,6 +48,8 @@ pub fn generate_prefix_action(inv: &Invocation) -> Result<proc_macro2::TokenStre
         false => None,
     };
 
+    let function = &inv.function;
+
     Ok(quote::quote! {
         |ctx| Box::pin(async move {
             let ( #( #param_names, )* .. ) = ::poise::parse_prefix_args!(
@@ -59,6 +61,8 @@ pub fn generate_prefix_action(inv: &Invocation) -> Result<proc_macro2::TokenStre
                 input,
                 ctx: ctx.into(),
             })?;
+
+            #function
 
             inner(ctx.into(), #( #param_names, )* )
                 .await

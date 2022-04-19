@@ -139,6 +139,19 @@ pub fn generate_slash_action(inv: &Invocation) -> Result<proc_macro2::TokenStrea
         })
         .collect::<Vec<_>>();
 
+    let function = &inv.function;
+    let block = &inv.function.block;
+    let statements = &inv.function.block.stmts;
+    let inputs = &inv.function.sig.inputs;
+    let ctx_type = match inv.function.sig.inputs.first() {
+        Some(syn::FnArg::Typed(syn::PatType { ty, .. })) => &**ty,
+        _ => {
+            return Err(
+                syn::Error::new(inv.function.sig.span(), "expected a Context parameter").into(),
+            )
+        }
+    };
+
     Ok(quote::quote! {
         |ctx| Box::pin(async move {
             // idk why this can't be put in the macro itself (where the lint is triggered) and
@@ -161,7 +174,12 @@ pub fn generate_slash_action(inv: &Invocation) -> Result<proc_macro2::TokenStrea
                 },
             })?;
 
-            inner(ctx.into(), #( #param_identifiers, )*)
+            async move {
+                let ctx: #ctx_type = ctx.into();
+                #block
+            }
+
+            //closure(ctx.into(), #( #param_identifiers, )*)
                 .await
                 .map_err(|error| poise::FrameworkError::Command {
                     error,

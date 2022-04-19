@@ -205,6 +205,9 @@ fn generate_command(mut inv: Invocation) -> Result<proc_macro2::TokenStream, dar
             )
         }
     };
+
+    let function_name = std::mem::replace(&mut inv.function.sig.ident, syn::parse_quote! { inner });
+
     // Needed because we're not allowed to have lifetimes in the hacky use case below
     let ctx_type_with_static =
         syn::fold::fold_type(&mut crate::util::AllLifetimesToStatic, ctx_type.clone());
@@ -269,7 +272,6 @@ fn generate_command(mut inv: Invocation) -> Result<proc_macro2::TokenStream, dar
     let parameters = slash::generate_parameters(&inv)?;
     let ephemeral = inv.args.ephemeral;
 
-    let function_name = std::mem::replace(&mut inv.function.sig.ident, syn::parse_quote! { inner });
     let function_visibility = &inv.function.vis;
     let function = &inv.function;
     Ok(quote::quote! {
@@ -277,8 +279,6 @@ fn generate_command(mut inv: Invocation) -> Result<proc_macro2::TokenStream, dar
             <#ctx_type_with_static as poise::_GetGenerics>::U,
             <#ctx_type_with_static as poise::_GetGenerics>::E,
         > {
-            #function
-
             ::poise::Command {
                 prefix_action: #prefix_action,
                 slash_action: #slash_action,
